@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Control Center</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar admin-navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="nav-icon">👑</span>
+                <h2>Admin Panel</h2>
+            </div>
+            <div class="nav-links">
+                <span id="userInfo" class="user-info"></span>
+                <a href="/dashboard" class="btn btn-secondary">
+                    <span>Dashboard</span>
+                </a>
+                <button id="logoutBtn" class="btn btn-secondary">
+                    <span>Logout</span>
+                    <span class="btn-icon">🚪</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+    <div class="admin-hero">
+        <div class="hero-content">
+            <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Admin" class="hero-image">
+            <div class="hero-overlay admin-overlay"></div>
+            <div class="hero-text">
+                <h1>Control Center</h1>
+                <p>Manage your system with administrative privileges</p>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="dashboard-grid">
+            <div class="dashboard-card profile-card">
+                <div class="card-header">
+                    <div class="card-icon">👤</div>
+                    <h2>Admin Profile</h2>
+                </div>
+                <div id="userDetails" class="user-details"></div>
+            </div>
+            <div class="dashboard-card admin-functions-card">
+                <div class="card-header">
+                    <div class="card-icon">⚙️</div>
+                    <h2>Administrative Functions</h2>
+                </div>
+                <div class="admin-content">
+                    <p class="admin-description">This is a protected admin-only area with full system access.</p>
+                    <div class="admin-features-grid">
+                        <div class="admin-feature">
+                            <div class="feature-icon-large">👥</div>
+                            <h3>User Management</h3>
+                            <p>Manage user accounts, roles, and permissions</p>
+                        </div>
+                        <div class="admin-feature">
+                            <div class="feature-icon-large">⚙️</div>
+                            <h3>System Configuration</h3>
+                            <p>Configure system settings and preferences</p>
+                        </div>
+                        <div class="admin-feature">
+                            <div class="feature-icon-large">📊</div>
+                            <h3>Reports & Analytics</h3>
+                            <p>View detailed reports and system analytics</p>
+                        </div>
+                        <div class="admin-feature">
+                            <div class="feature-icon-large">🔐</div>
+                            <h3>Role Management</h3>
+                            <p>Manage user roles and access levels</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-card security-card">
+                <div class="card-header">
+                    <div class="card-icon">🛡️</div>
+                    <h2>Security Status</h2>
+                </div>
+                <div class="security-status">
+                    <div class="security-item">
+                        <span class="security-icon">✓</span>
+                        <span>All systems secure</span>
+                    </div>
+                    <div class="security-item">
+                        <span class="security-icon">🔒</span>
+                        <span>Admin privileges active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/js/auth.js"></script>
+    <script>
+        // Load user info on page load
+        fetch('/api/user')
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('Admin access required');
+                    }
+                    throw new Error('Not authenticated');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const user = data.user;
+                document.getElementById('userInfo').innerHTML = `<span class="user-avatar">👑</span> ${user.username}`;
+                document.getElementById('userDetails').innerHTML = `
+                    <div class="detail-item">
+                        <div class="detail-icon">👤</div>
+                        <div class="detail-content">
+                            <strong>Username</strong>
+                            <span>${user.username}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-icon">📧</div>
+                        <div class="detail-content">
+                            <strong>Email</strong>
+                            <span>${user.email}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-icon">🎭</div>
+                        <div class="detail-content">
+                            <strong>Role</strong>
+                            <span class="badge badge-admin">${user.role}</span>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Access denied');
+                window.location.href = '/dashboard';
+            });
+    </script>
+</body>
+</html>
+
