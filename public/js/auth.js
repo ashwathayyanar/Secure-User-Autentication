@@ -76,9 +76,8 @@ if (loginForm) {
 
             if (response.ok) {
                 showMessage('message', 'Login successful! Redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = '/dashboard.html';
-                },2000);
+             window.location.href = '/dashboard.html';
+
             } else {
                 showMessage('message', data.error || 'Login failed', 'error');
             }
