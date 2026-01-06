@@ -39,6 +39,3 @@ sessions/
 dist/
 build/
 
-# Vercel
-.vercel
-

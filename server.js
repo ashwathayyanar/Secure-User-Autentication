@@ -5,7 +5,7 @@ const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const { requireAuth } = require('./middleware/authMiddleware');
 const { requireAdmin } = require('./middleware/roleMiddleware');
-const { closePool } = require('./database/db');
+const { db } = require('./database/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,13 +67,14 @@ app.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  await closePool();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await closePool();
-  process.exit(0);
+process.on('SIGINT', () => {
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err.message);
+    } else {
+      console.log('Database connection closed');
+    }
+    process.exit(0);
+  });
 });
 

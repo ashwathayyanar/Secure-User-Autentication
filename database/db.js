@@ -1,109 +1,79 @@
-const { Pool } = require('pg');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-// PostgreSQL connection configuration
-// Supports both local development and Vercel Postgres
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
-
-// Test connection
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+const dbPath = path.join(__dirname, '..', 'database.db');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database:', err.message);
+  } else {
+    console.log('Connected to SQLite database');
+  }
 });
 
 // Initialize database and create users table
-const initializeDatabase = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(255) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role VARCHAR(50) NOT NULL DEFAULT 'user',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('Users table created or already exists');
-  } catch (error) {
-    console.error('Error creating users table:', error.message);
-    // Don't throw in production to allow the app to continue
-    if (process.env.NODE_ENV !== 'production') {
-      throw error;
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) {
+      console.error('Error creating users table:', err.message);
+    } else {
+      console.log('Users table created or already exists');
     }
-  }
-};
-
-// Initialize on module load
-initializeDatabase().catch(console.error);
+  });
+});
 
 // Database helper functions
 const dbHelpers = {
   // Get user by email
-  getUserByEmail: async (email) => {
-    try {
-      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-      return result.rows[0] || null;
-    } catch (error) {
-      console.error('Error getting user by email:', error);
-      throw error;
-    }
+  getUserByEmail: (email) => {
+    return new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
   },
 
   // Get user by username
-  getUserByUsername: async (username) => {
-    try {
-      const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-      return result.rows[0] || null;
-    } catch (error) {
-      console.error('Error getting user by username:', error);
-      throw error;
-    }
+  getUserByUsername: (username) => {
+    return new Promise((resolve, reject) => {
+      db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
   },
 
   // Get user by ID
-  getUserById: async (id) => {
-    try {
-      const result = await pool.query(
-        'SELECT id, username, email, role, created_at FROM users WHERE id = $1',
-        [id]
-      );
-      return result.rows[0] || null;
-    } catch (error) {
-      console.error('Error getting user by id:', error);
-      throw error;
-    }
+  getUserById: (id) => {
+    return new Promise((resolve, reject) => {
+      db.get('SELECT id, username, email, role, created_at FROM users WHERE id = ?', [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
   },
 
   // Create new user
-  createUser: async (username, email, hashedPassword, role = 'user') => {
-    try {
-      const result = await pool.query(
-        'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
-        [username, email, hashedPassword, role]
+  createUser: (username, email, hashedPassword, role = 'user') => {
+    return new Promise((resolve, reject) => {
+      db.run(
+        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+        [username, email, hashedPassword, role],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ id: this.lastID, username, email, role });
+        }
       );
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating user:', error);
-      throw error;
-    }
+    });
   }
 };
 
-// Graceful shutdown
-const closePool = async () => {
-  try {
-    await pool.end();
-    console.log('PostgreSQL pool closed');
-  } catch (error) {
-    console.error('Error closing PostgreSQL pool:', error);
-  }
-};
+module.exports = { db, dbHelpers };
 
-module.exports = { pool, dbHelpers, closePool };
